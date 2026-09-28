@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🔗 Mis Enlaces</title>
+<style>
+  :root{
+    --bg:#ffffff; --card:#f8f9fb; --card2:#eef1f6; --border:#d8dde6;
+    --txt:#1a1d24; --muted:#6b7280; --accent:#2563eb; --green:#16a34a;
+    --red:#dc2626; --purple:#9333ea;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg); color:var(--txt); padding:14px; font-size:14px;
+  }
+
+  h1{font-size:20px;margin:0 0 14px;color:var(--accent);}
+
+  .sync-status{
+    font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;
+    background:#e5e7eb;color:#6b7280;display:inline-block;margin-left:6px;
+    vertical-align:middle;
+  }
+  .sync-status.syncing{background:#dbeafe;color:#2563eb;}
+  .sync-status.synced{background:#dcfce7;color:#16a34a;}
+  .sync-status.error{background:#fee2e2;color:#dc2626;}
+
+  .links-container{
+    background:#eff6ff;border:2px solid var(--accent);border-radius:12px;
+    padding:12px;margin-bottom:14px;
+  }
+  .links-header{
+    display:flex;justify-content:space-between;align-items:center;
+    gap:8px;flex-wrap:wrap;margin-bottom:10px;
+  }
+  .links-header h2{margin:0;font-size:15px;color:var(--accent);}
+
+  .btn{
+    padding:9px 14px;border:none;border-radius:8px;cursor:pointer;
+    font-weight:700;font-size:13px;color:#fff;background:var(--card2);
+    border:1px solid var(--border);transition:.15s;
+  }
+  .btn-primary{background:var(--accent);border-color:var(--accent);}
+  .btn-green{background:var(--green);border-color:var(--green);}
+  .btn-red{background:var(--red);border-color:var(--red);}
+  .btn-gray{background:#6b7280;border-color:#6b7280;}
+  .btn:hover{filter:brightness(.95);}
+
+  .links-list{
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .link-item{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:8px;background:#fff;border:2px solid var(--accent);
+    border-radius:10px;padding:0;overflow:hidden;
+  }
+  .link-item .link-name{
+    flex:1;padding:12px 14px;color:var(--accent);font-weight:800;
+    font-size:15px;text-decoration:none;display:block;
+    word-break:break-word;
+  }
+  .link-item .link-name:hover{background:#dbeafe;}
+  .link-item .link-actions{
+    display:flex;gap:0;flex-shrink:0;
+  }
+  .link-item .link-actions button{
+    background:transparent;border:none;color:var(--muted);
+    padding:12px 12px;cursor:pointer;font-size:14px;font-weight:700;
+    border-left:1px solid var(--border);
+  }
+  .link-item .link-actions button:hover{background:#f3f4f6;}
+  .link-item .btn-del:hover{background:#fee2e2;color:var(--red);}
+
+  .empty{
+    text-align:center;color:var(--muted);font-style:italic;
+    padding:20px;font-size:13px;
+  }
+
+  .loading{
+    position:fixed;inset:0;background:rgba(255,255,255,.95);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:500;font-size:14px;color:var(--accent);font-weight:700;padding:20px;text-align:center;
+  }
+  .loading .spinner{
+    width:40px;height:40px;border:4px solid #dbeafe;border-top-color:var(--accent);
+    border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px;
+  }
+  .loading .err-msg{color:var(--red);font-size:13px;margin-top:12px;max-width:400px;line-height:1.5;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;
+    align-items:center;justify-content:center;z-index:200;padding:16px;
+  }
+  .modal{
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    padding:18px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;
+  }
+  .modal h3{margin-top:0;color:var(--purple);}
+  .field-row{margin-bottom:12px;}
+  .field-row label{
+    display:block;font-size:12px;font-weight:700;color:var(--muted);
+    text-transform:uppercase;margin-bottom:5px;
+  }
+  .field-row input{
+    width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;
+    font-size:15px;font-family:inherit;background:#fff;color:var(--txt);
+  }
+  .field-row input:focus{outline:2px solid var(--accent);}
+  .field-row .hint{font-size:10px;color:var(--muted);margin-top:3px;}
+  .modal-actions{
+    display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;
+  }
+
+  .toast{
+    position:fixed;bottom:16px;right:16px;left:16px;background:var(--accent);color:#fff;
+    padding:12px 16px;border-radius:8px;font-size:13px;font-weight:600;
+    opacity:0;transition:.3s;pointer-events:none;z-index:100;text-align:center;
+  }
+  .toast.show{opacity:1;}
+  .toast.red{background:var(--red);}
+  .toast.green{background:var(--green);}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingText">Cargando enlaces...</div>
+  <div class="err-msg" id="loadingError" style="display:none"></div>
+</div>
+
+<h1>🔗 Mis Enlaces <span class="sync-status" id="syncStatus">☁️ Cargando...</span></h1>
+
+<div class="links-container">
+  <div class="links-header">
+    <h2>Enlaces guardados</h2>
+    <button class="btn btn-primary" onclick="openAddLinkModal()">+ Añadir enlace</button>
+  </div>
+  <div class="links-list" id="linksList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="modalContainer"></div>
+
+<script>
+/* ============================================================
+   🔐 CREDENCIALES — EN TEXTO PLANO
+   ============================================================
+   Cambia estas 2 líneas con tus datos.
+   Gist ID ya está puesto. Solo pega tu token.
+   ============================================================ */
+const GIST_ID = 'd83b58d17dcf53f8a16280e6c4a7ab38';
+const GIST_TOKEN = 'ghp_TU_TOKEN_AQUI';
+const GIST_FILENAME = 'faucets-state.json';
+
+const SYNC_DEBOUNCE_MS = 1500;
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+let fullState = null;    // El JSON completo del Gist (con faucets, enlaces, etc.)
+let quickLinks = [];     // Solo los enlaces
+let syncTimer = null;
+let isSyncing = false;
+
+/* ============================================================
+   CARGA DESDE GIST
+   ============================================================ */
+async function loadFromGist(){
+  showLoading('Cargando enlaces...');
+  setSyncStatus('syncing', '☁️ Cargando...');
+  try{
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 15000);
+    const url = `https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `token ${GIST_TOKEN}`, 'Accept': 'application/vnd.github+json' },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if(!res.ok){
+      if(res.status === 401){ showError('❌ Token inválido o revocado.'); setSyncStatus('error', '⚠️ Token inválido'); return; }
+      if(res.status === 404){ showError('❌ Gist no encontrado.'); setSyncStatus('error', '⚠️ Gist no encontrado'); return; }
+      if(res.status === 403){ showError('❌ Límite alcanzado.'); setSyncStatus('error', '⚠️ Límite'); return; }
+      showError('❌ Error HTTP ' + res.status);
+      setSyncStatus('error', '⚠️ Error');
+      return;
+    }
+
+    const gist = await res.json();
+    const file = gist.files[GIST_FILENAME];
+    if(!file){
+      showError(`❌ El Gist no tiene "${GIST_FILENAME}".`);
+      setSyncStatus('error', '⚠️ Archivo no encontrado');
+      return;
+    }
+
+    const content = (file.content || '').trim();
+    if(content === '' || content === '{}'){
+      fullState = {};
+      quickLinks = [];
+    }else{
+      fullState = JSON.parse(content);
+      if(!Array.isArray(fullState.quickLinks)) fullState.quickLinks = [];
+      quickLinks = fullState.quickLinks;
+    }
+
+    setSyncStatus('synced', '☁️ Sincronizado');
+    hideLoading();
+    renderQuickLinks();
+  }catch(err){
+    console.error(err);
+    if(err.name === 'AbortError') showError('⏱️ Timeout.');
+    else showError('❌ Error: ' + err.message);
+    setSyncStatus('error', '⚠️ Error');
+  }
+}
+
+/* ============================================================
+   GUARDAR EN GIST (solo quickLinks, resto intacto)
+   ============================================================ */
+function saveState(){
+  if(syncTimer) clearTimeout(syncTimer);
+  setSyncStatus('syncing', '💾 Guardando...');
+  syncTimer = setTimeout(()=>{ saveToGist(); }, SYNC_DEBOUNCE_MS);
+}
+
+async function saveToGist(){
+  if(isSyncing) return;
+  if(!fullState) fullState = {};
+  // Actualizar solo el campo quickLinks en el state completo
+  fullState.quickLinks = quickLinks;
+
+  isSyncing = true;
+  try{
+    const url = `https://api.github.com/gists/${GIST_ID}`;
+    const body = { files: { [GIST_FILENAME]: { content: JSON.stringify(fullState, null, 2) } } };
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Authorization': `token ${GIST_TOKEN}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    setSyncStatus('synced', '☁️ Sincronizado');
+  }catch(err){
+    console.error(err);
+    setSyncStatus('error', '⚠️ ' + err.message);
+  }finally{
+    isSyncing = false;
+  }
+}
+
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+function showLoading(msg){
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  document.getElementById('loadingText').textContent = msg || 'Cargando...';
+  document.getElementById('loadingError').style.display = 'none';
+}
+function showError(msg){
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  document.getElementById('loadingText').style.display = 'none';
+  document.getElementById('loadingError').textContent = msg;
+  document.getElementById('loadingError').style.display = '';
+}
+function hideLoading(){ document.getElementById('loadingOverlay').style.display = 'none'; }
+function setSyncStatus(cls, txt){
+  const el = document.getElementById('syncStatus');
+  if(el){ el.className = 'sync-status ' + cls; el.textContent = txt; }
+}
+function escapeHtml(text){
+  if(text === undefined || text === null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+let toastTimer;
+function toast(msg, isRed, isGreen){
+  const el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.toggle('red', !!isRed);
+  el.classList.toggle('green', !!isGreen);
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.classList.remove('show','red','green'); }, 2500);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function renderQuickLinks(){
+  const cont = document.getElementById('linksList');
+  if(!cont) return;
+  if(quickLinks.length === 0){
+    cont.innerHTML = '<div class="empty">Todavía no hay enlaces.<br>Toca "+ Añadir enlace" para agregar uno.</div>';
+    return;
+  }
+  cont.innerHTML = quickLinks.map(l => `
+    <div class="link-item">
+      <a class="link-name" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">🔗 ${escapeHtml(l.name)}</a>
+      <div class="link-actions">
+        <button onclick="editLink('${l.id}')" title="Editar">✏️</button>
+        <button class="btn-del" onclick="deleteLink('${l.id}')" title="Eliminar">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   AÑADIR / EDITAR / ELIMINAR
+   ============================================================ */
+function openAddLinkModal(){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.onclick = e=>{ if(e.target===bg) closeModal(); };
+  bg.innerHTML = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>➕ Añadir enlace</h3>
+      <div class="field-row">
+        <label>Nombre</label>
+        <input type="text" id="linkName" placeholder="Ej: Google" maxlength="60">
+      </div>
+      <div class="field-row">
+        <label>Enlace (URL)</label>
+        <input type="text" id="linkUrl" placeholder="https://ejemplo.com">
+        <div class="hint">Debe empezar por http:// o https://</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-gray" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-green" onclick="saveNewLink()">💾 Guardar</button>
+      </div>
+    </div>`;
+  document.getElementById('modalContainer').appendChild(bg);
+  setTimeout(()=>{ const el = document.getElementById('linkName'); if(el) el.focus(); }, 100);
+}
+
+function saveNewLink(){
+  const name = document.getElementById('linkName').value.trim();
+  let url = document.getElementById('linkUrl').value.trim();
+  if(!name){ alert('Pon un nombre'); return; }
+  if(!url){ alert('Pon una URL'); return; }
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  const id = 'link_' + Date.now();
+  quickLinks.push({ id, name, url });
+  saveState();
+  closeModal();
+  renderQuickLinks();
+  toast(`🔗 Enlace añadido`, false, true);
+}
+
+function editLink(id){
+  const l = quickLinks.find(x => x.id === id);
+  if(!l) return;
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.onclick = e=>{ if(e.target===bg) closeModal(); };
+  bg.innerHTML = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>✏️ Editar enlace</h3>
+      <div class="field-row">
+        <label>Nombre</label>
+        <input type="text" id="linkName" value="${escapeHtml(l.name)}" maxlength="60">
+      </div>
+      <div class="field-row">
+        <label>Enlace (URL)</label>
+        <input type="text" id="linkUrl" value="${escapeHtml(l.url)}">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-gray" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-green" onclick="saveEditLink('${id}')">💾 Guardar</button>
+      </div>
+    </div>`;
+  document.getElementById('modalContainer').appendChild(bg);
+}
+
+function saveEditLink(id){
+  const l = quickLinks.find(x => x.id === id);
+  if(!l) return;
+  const name = document.getElementById('linkName').value.trim();
+  let url = document.getElementById('linkUrl').value.trim();
+  if(!name || !url){ alert('Rellena los dos campos'); return; }
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  l.name = name;
+  l.url = url;
+  saveState();
+  closeModal();
+  renderQuickLinks();
+  toast(`✏️ Enlace actualizado`, false, true);
+}
+
+function deleteLink(id){
+  const l = quickLinks.find(x => x.id === id);
+  if(!l) return;
+  if(!confirm(`¿Eliminar el enlace "${l.name}"?`)) return;
+  quickLinks = quickLinks.filter(x => x.id !== id);
+  saveState();
+  renderQuickLinks();
+  toast(`🗑️ Enlace eliminado`, true);
+}
+
+function closeModal(){ document.getElementById('modalContainer').innerHTML = ''; }
+
+/* ============================================================
+   INIT
+   ============================================================ */
+loadFromGist();
+</script>
+</body>
+</html>
